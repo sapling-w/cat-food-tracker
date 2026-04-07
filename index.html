@@ -1,0 +1,393 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>🐾 黑虎饮食记录</title>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Hiragino Sans GB", sans-serif; background: #f7f0e8; color: #3d2b1f; min-height: 100vh; padding: 0 16px 20px; max-width: 500px; margin: 0 auto; }
+    header { text-align: center; margin-bottom: 24px; padding: 20px 16px 16px; }
+    .cat-svg-wrap { display: flex; justify-content: center; margin-bottom: 12px; }
+    header .title { font-size: 1.7rem; font-weight: 700; color: #3d2b1f; letter-spacing: 0.02em; }
+    header .tagline { font-size: 0.92rem; color: #a08878; margin-top: 5px; }
+    header .date { font-size: 0.85rem; color: #a08878; margin-top: 6px; }
+    .tab-bar { position: sticky; top: 0; left: 0; width: calc(100% + 32px); background: #fffcf8; border-bottom: 1px solid #e8d8cc; display: flex; justify-content: space-around; align-items: center; padding: 8px 0 10px; z-index: 100; box-shadow: 0 2px 12px rgba(139,94,60,0.07); margin-left: -16px; }
+    .tab-btn { display: flex; flex-direction: column; align-items: center; gap: 3px; background: none; border: none; cursor: pointer; padding: 6px 10px; border-radius: 14px; font-size: 0.72rem; color: #a08878; transition: all 0.2s; min-width: 52px; }
+    .tab-btn .tab-icon { font-size: 1.3rem; line-height: 1; }
+    .tab-btn.active { background: #8b5e3c; color: white; transform: scale(1.08); box-shadow: 0 3px 10px rgba(139,94,60,0.3); }
+    .section { display: none; }
+    .section.active { display: block; }
+    .card { background: #fffcf8; border-radius: 20px; padding: 18px 16px; margin-bottom: 16px; box-shadow: 0 4px 16px rgba(139,94,60,0.08); border-top: 3px solid #8b5e3c; }
+    .card h2 { font-size: 1rem; font-weight: 700; color: #8b5e3c; margin-bottom: 14px; display: flex; align-items: center; gap: 6px; }
+    .date-selector-row { display: flex; align-items: center; gap: 10px; margin-bottom: 14px; background: #fffcf8; border-radius: 14px; padding: 10px 14px; border: 1.5px solid #e8d8cc; }
+    .date-selector-row label { font-size: 0.85rem; color: #8b5e3c; font-weight: 600; white-space: nowrap; }
+    .date-selector-row select { flex: 1; padding: 7px 10px; border: 1.5px solid #d8c8bc; border-radius: 10px; font-size: 0.9rem; background: white; color: #3d2b1f; outline: none; }
+    .yesterday-group { background: #fff8ee; border: 1.5px dashed #f0b060; border-radius: 20px; padding: 16px; margin-bottom: 16px; box-shadow: 0 4px 16px rgba(139,94,60,0.05); }
+    .yesterday-group h2 { font-size: 0.95rem; font-weight: 700; color: #c07030; margin-bottom: 6px; display: flex; align-items: center; gap: 6px; }
+    .yesterday-group .hint { font-size: 0.78rem; color: #cca070; margin-bottom: 12px; }
+    .yesterday-row { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; }
+    .yesterday-row label { font-size: 0.85rem; color: #a07050; white-space: nowrap; min-width: 60px; }
+    .yesterday-row input { width: 80px; padding: 6px 10px; border: 1.5px solid #e8c8a0; border-radius: 10px; font-size: 0.9rem; background: white; color: #3d2b1f; outline: none; }
+    .yesterday-row input:focus { border-color: #8b5e3c; }
+    .yesterday-row select { padding: 6px 10px; border: 1.5px solid #e8c8a0; border-radius: 10px; font-size: 0.88rem; background: white; color: #3d2b1f; outline: none; }
+    .yesterday-row .unit { color: #a08878; font-size: 0.82rem; }
+    .yest-save-tip { font-size: 0.78rem; color: transparent; height: 16px; transition: color 0.3s; margin-top: 6px; min-height: 16px; }
+    .yest-save-tip.saved { color: #7cb87c; }
+    input[type=number], input[type=text], select, textarea { font-family: inherit; }
+    .feed-list { margin-bottom: 10px; }
+    .feed-item { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; }
+    .feed-item input[type=number] { flex: 1; padding: 8px 12px; border: 1.5px solid #d8c8bc; border-radius: 10px; font-size: 0.95rem; background: white; color: #3d2b1f; outline: none; }
+    .feed-item input[type=number]:focus { border-color: #8b5e3c; }
+    .feed-item .unit { color: #a08878; font-size: 0.85rem; white-space: nowrap; }
+    .feed-item .del-btn { background: none; border: none; color: #d8c8bc; cursor: pointer; font-size: 1rem; padding: 0 4px; }
+    .feed-item .del-btn:hover { color: #e07070; }
+    .wet-item { display: flex; align-items: center; gap: 6px; margin-bottom: 8px; flex-wrap: wrap; }
+    .wet-item input[type=number] { width: 72px; padding: 7px 10px; border: 1.5px solid #d8c8bc; border-radius: 10px; font-size: 0.9rem; background: white; color: #3d2b1f; outline: none; }
+    .wet-item input[type=number]:focus { border-color: #8b5e3c; }
+    .wet-item select { padding: 7px 10px; border: 1.5px solid #d8c8bc; border-radius: 10px; font-size: 0.9rem; background: white; color: #3d2b1f; outline: none; }
+    .wet-item .unit { color: #a08878; font-size: 0.82rem; white-space: nowrap; }
+    .wet-item .del-btn { background: none; border: none; color: #d8c8bc; cursor: pointer; font-size: 1rem; padding: 0 4px; margin-left: auto; }
+    .wet-item .del-btn:hover { color: #e07070; }
+    .med-item { display: flex; align-items: center; gap: 6px; margin-bottom: 8px; flex-wrap: wrap; }
+    .med-item input[type=text] { flex: 2; min-width: 80px; padding: 7px 10px; border: 1.5px solid #d8c8bc; border-radius: 10px; font-size: 0.9rem; background: white; color: #3d2b1f; outline: none; }
+    .med-item input[type=text]:focus { border-color: #8b5e3c; }
+    .med-item input[type=number] { width: 54px; padding: 7px 8px; border: 1.5px solid #d8c8bc; border-radius: 10px; font-size: 0.9rem; background: white; color: #3d2b1f; outline: none; }
+    .med-item input[type=number]:focus { border-color: #8b5e3c; }
+    .med-item select { padding: 7px 10px; border: 1.5px solid #d8c8bc; border-radius: 10px; font-size: 0.9rem; background: white; color: #3d2b1f; outline: none; }
+    .med-item .x-sep { color: #a08878; font-size: 0.85rem; }
+    .med-item .del-btn { background: none; border: none; color: #d8c8bc; cursor: pointer; font-size: 1rem; padding: 0 4px; margin-left: auto; }
+    .med-item .del-btn:hover { color: #e07070; }
+    .med-note { width: 100%; margin-top: 12px; padding: 10px 14px; border: 1.5px solid #d8c8bc; border-radius: 12px; font-size: 0.88rem; color: #3d2b1f; resize: vertical; min-height: 64px; background: white; outline: none; }
+    .med-note:focus { border-color: #8b5e3c; }
+    .add-btn { display: inline-flex; align-items: center; gap: 4px; background: none; border: 1.5px dashed #8b5e3c; color: #8b5e3c; padding: 6px 14px; border-radius: 10px; cursor: pointer; font-size: 0.85rem; font-weight: 500; }
+    .add-btn:hover { background: #f3eee8; }
+    .leftover-row { display: flex; align-items: center; gap: 8px; margin-top: 14px; padding-top: 14px; border-top: 1px dashed #e8d8cc; flex-wrap: wrap; }
+    .leftover-row label { font-size: 0.85rem; color: #a08878; white-space: nowrap; }
+    .leftover-row .hint-text { font-size: 0.76rem; color: #c8b8b0; }
+    .leftover-row input { width: 84px; padding: 7px 12px; border: 1.5px solid #d8c8bc; border-radius: 10px; font-size: 0.95rem; background: white; color: #3d2b1f; outline: none; }
+    .leftover-row input:focus { border-color: #8b5e3c; }
+    .leftover-row select { padding: 7px 12px; border: 1.5px solid #d8c8bc; border-radius: 10px; font-size: 0.9rem; background: white; color: #3d2b1f; outline: none; }
+    .leftover-row .unit { color: #a08878; font-size: 0.85rem; }
+    .autosave-tip { text-align: center; font-size: 0.8rem; color: #c8b8b0; margin-bottom: 10px; height: 22px; position: relative; display: flex; align-items: center; justify-content: center; gap: 4px; }
+    .autosave-tip.saved { color: #7cb87c; }
+    @keyframes pawFloat { 0% { opacity:1; transform:translateY(0) scale(1); } 70% { opacity:0.7; transform:translateY(-24px) scale(1.1); } 100% { opacity:0; transform:translateY(-38px) scale(0.85); } }
+    .paw-float { position: absolute; pointer-events: none; animation: pawFloat 1.3s ease-out forwards; font-size: 1.1rem; right: 28%; top: -8px; }
+    .calc-btn { display: block; width: 100%; margin: 0 auto 16px; padding: 15px; background: linear-gradient(135deg, #8b5e3c, #c49a6c); color: white; border: none; border-radius: 16px; font-size: 1rem; cursor: pointer; font-weight: 600; letter-spacing: 0.03em; box-shadow: 0 4px 14px rgba(139,94,60,0.3); }
+    .calc-btn:hover { opacity: 0.88; }
+    .summary-card { background: #fffcf8; border-radius: 20px; padding: 20px; box-shadow: 0 4px 16px rgba(139,94,60,0.08); border-top: 3px solid #8b5e3c; max-width: 500px; margin: 0 auto 16px; }
+    .summary-card h2 { font-size: 1rem; color: #8b5e3c; margin-bottom: 18px; text-align: center; font-weight: 700; }
+    .summary-row { display: flex; justify-content: space-between; align-items: center; padding: 8px 0; border-bottom: 1px solid #f0e8e0; font-size: 0.95rem; }
+    .summary-row .label { color: #3d2b1f; }
+    .summary-row .value { font-weight: 700; color: #8b5e3c; }
+    .total-row { display: flex; justify-content: space-between; align-items: center; background: linear-gradient(135deg, #8b5e3c, #c49a6c); border-radius: 14px; padding: 14px 18px; margin-top: 14px; font-size: 1.05rem; font-weight: 700; color: white; box-shadow: 0 4px 12px rgba(139,94,60,0.25); }
+    .pending-note { text-align: center; font-size: 0.8rem; color: #c09060; margin-top: 10px; }
+    .med-summary-block { margin-top: 16px; padding-top: 14px; border-top: 1px solid #e8d8cc; }
+    .med-summary-block h3 { font-size: 0.9rem; color: #8b5e3c; font-weight: 600; margin-bottom: 10px; }
+    .med-summary-item { display: flex; justify-content: space-between; padding: 6px 0; font-size: 0.9rem; border-bottom: 1px solid #f7f0e8; color: #3d2b1f; }
+    .med-summary-note { margin-top: 8px; font-size: 0.82rem; color: #a08878; font-style: italic; }
+    .empty-tip { text-align: center; color: #a08878; font-size: 0.9rem; padding: 20px 0; }
+    .chart-card { background: #fffcf8; border-radius: 20px; padding: 20px; box-shadow: 0 4px 16px rgba(139,94,60,0.08); border-top: 3px solid #8b5e3c; max-width: 500px; margin: 0 auto 16px; }
+    .chart-card h2 { font-size: 1rem; color: #8b5e3c; font-weight: 700; margin-bottom: 16px; text-align: center; }
+    .range-btns { display: flex; gap: 8px; justify-content: center; margin-bottom: 18px; }
+    .range-btn { padding: 5px 16px; border-radius: 14px; border: 1.5px solid #8b5e3c; background: white; color: #8b5e3c; font-size: 0.85rem; cursor: pointer; }
+    .range-btn.active { background: #8b5e3c; color: white; box-shadow: 0 2px 8px rgba(139,94,60,0.2); }
+    .weight-input-row { display: flex; align-items: center; gap: 10px; margin-bottom: 10px; }
+    .weight-input-row label { font-size: 0.85rem; color: #a08878; min-width: 36px; }
+    .weight-input-row input { flex: 1; padding: 8px 12px; border: 1.5px solid #d8c8bc; border-radius: 10px; font-size: 0.95rem; background: white; color: #3d2b1f; outline: none; }
+    .weight-input-row input:focus { border-color: #8b5e3c; }
+  </style>
+</head>
+<body>
+<nav class="tab-bar">
+  <button class="tab-btn active" onclick="switchTab('feed')" id="tab-feed"><span class="tab-icon">🍽️</span><span>投喂</span></button>
+  <button class="tab-btn" onclick="switchTab('med')" id="tab-med"><span class="tab-icon">💊</span><span>药物</span></button>
+  <button class="tab-btn" onclick="switchTab('summary')" id="tab-summary"><span class="tab-icon">📊</span><span>汇总</span></button>
+  <button class="tab-btn" onclick="switchTab('history'); renderHistory();" id="tab-history"><span class="tab-icon">📈</span><span>趋势</span></button>
+  <button class="tab-btn" onclick="switchTab('weight')" id="tab-weight"><span class="tab-icon">⚖️</span><span>体重</span></button>
+</nav>
+<header>
+  <div class="cat-svg-wrap"><img src="heihv.png" alt="黑虎" style="width:120px;height:auto;" /></div>
+  <div class="title">黑虎饮食记录</div>
+  <div class="tagline">暹罗猫的每日营养日记 🐾</div>
+  <div class="date" id="today-date"></div>
+</header>
+<div id="section-feed" class="section active">
+  <div class="date-selector-row"><label>📅 记录日期</label><select id="feed-date-select" onchange="onFeedDateChange()"></select></div>
+  <div class="yesterday-group">
+    <h2>🌅 昨日清点</h2><div class="hint">昨天没填剩余？现在补填，自动修正昨日数据</div>
+    <div class="yesterday-row"><label>🥣 猫粮</label><input type="number" id="yest-kibble" min="0" step="0.1" placeholder="0" oninput="saveYesterday()" /><span class="unit">克</span></div>
+    <div class="yesterday-row"><label>🥫 罐头</label><select id="yest-wet" onchange="saveYesterday()"><option value="-1">— 不修改 —</option><option value="0">吃完了 🎉</option><option value="0.25">剩了 1/4</option><option value="0.5">剩了 1/2</option><option value="0.75">剩了 3/4</option></select></div>
+    <div class="yesterday-row"><label>🍗 其它</label><input type="number" id="yest-other" min="0" step="0.1" placeholder="0" oninput="saveYesterday()" /><span class="unit">克</span></div>
+    <div class="yest-save-tip" id="yest-save-tip"></div>
+  </div>
+  <div class="card"><h2>🥣 猫粮</h2><div class="feed-list" id="list-kibble"></div><button class="add-btn" onclick="addGramItem('kibble', undefined)">＋ 添加投喂</button><div class="leftover-row"><label>今日剩余：</label><input type="number" id="leftover-kibble" min="0" step="0.1" placeholder="留空=待定" oninput="autoSave()" /><span class="unit">克</span><span class="hint-text">（可留空，明早补填）</span></div></div>
+  <div class="card"><h2>🥫 罐头</h2><div class="feed-list" id="list-wet"></div><button class="add-btn" onclick="addWetItem(undefined)">＋ 添加投喂</button><div class="leftover-row"><label>今日剩余：</label><select id="leftover-wet" onchange="autoSave()"><option value="-1">— 待定 —</option><option value="0">吃完了 🎉</option><option value="0.25">剩了 1/4</option><option value="0.5">剩了 1/2</option><option value="0.75">剩了 3/4</option></select></div></div>
+  <div class="card"><h2>🍗 其它食物</h2><div class="feed-list" id="list-other"></div><button class="add-btn" onclick="addGramItem('other', undefined)">＋ 添加投喂</button><div class="leftover-row"><label>今日剩余：</label><input type="number" id="leftover-other" min="0" step="0.1" placeholder="留空=待定" oninput="autoSave()" /><span class="unit">克</span><span class="hint-text">（可留空，明早补填）</span></div></div>
+  <div class="autosave-tip" id="autosave-tip">填写后自动保存</div>
+  <button class="calc-btn" onclick="switchTab('summary')">查看今日汇总 →</button>
+</div>
+<div id="section-med" class="section">
+  <div class="date-selector-row"><label>📅 记录日期</label><select id="med-date-select" onchange="onMedDateChange()"></select></div>
+  <div class="card"><h2>💊 今日用药</h2><div class="feed-list" id="list-med"></div><button class="add-btn" onclick="addMedItem(undefined)">＋ 添加药物</button><textarea class="med-note" id="med-note" placeholder="备注（状态、特殊情况等）" oninput="autoSave()"></textarea></div>
+  <div class="autosave-tip" id="autosave-tip-med">填写后自动保存</div>
+  <button class="calc-btn" onclick="switchTab('summary')">查看今日汇总 →</button>
+</div>
+<div id="section-summary" class="section">
+  <div class="summary-card" id="summary-content"><div class="empty-tip">请先填写记录</div></div>
+</div>
+<div id="section-history" class="section">
+  <div class="chart-card">
+    <h2>📈 饮食摄入趋势</h2>
+    <div class="range-btns">
+      <button class="range-btn active" onclick="setRange(7, this)">近7天</button>
+      <button class="range-btn" onclick="setRange(14, this)">近14天</button>
+      <button class="range-btn" onclick="setRange(30, this)">近30天</button>
+    </div>
+    <canvas id="history-chart" height="200"></canvas>
+  </div>
+  <div class="chart-card" style="margin-top:16px">
+    <h2>⚖️ 体重趋势</h2>
+    <canvas id="weight-chart" height="180"></canvas>
+  </div>
+</div>
+<div id="section-weight" class="section">
+  <div class="card">
+    <h2>⚖️ 体重记录</h2>
+    <div class="weight-input-row"><label>日期</label><input type="date" id="weight-date" /></div>
+    <div class="weight-input-row"><label>体重</label><input type="number" id="weight-value" min="0" step="0.01" placeholder="如 4.20" /><span style="color:#a08878;font-size:0.85rem;">kg</span></div>
+    <button class="add-btn" style="margin-top:12px" onclick="addWeightRecord()">＋ 记录体重</button>
+  </div>
+</div>
+<script>
+  var now = new Date();
+  var todayKey = dateKey(now);
+  var yesterdayDate = new Date(now);
+  yesterdayDate.setDate(now.getDate() - 1);
+  var yesterdayKey = dateKey(yesterdayDate);
+  var currentFeedDate = todayKey;
+  var currentMedDate = todayKey;
+
+  function dateKey(d) {
+    return d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0') + '-' + String(d.getDate()).padStart(2,'0');
+  }
+
+  var DAY_NAMES = ['日','一','二','三','四','五','六'];
+  document.getElementById('today-date').textContent = now.getFullYear() + '年' + (now.getMonth()+1) + '月' + now.getDate() + '日 · 星期' + DAY_NAMES[now.getDay()];
+
+  var currentRange = 7, chartInstance = null, weightChartInstance = null, saveTimer = null, yestTimer = null;
+
+  function buildDateOptions(selectId, currentVal) {
+    var sel = document.getElementById(selectId); if (!sel) return; sel.innerHTML = '';
+    for (var i = 0; i <= 7; i++) {
+      var d = new Date(now); d.setDate(now.getDate() - i); var key = dateKey(d);
+      var label = i===0 ? '今天 ('+key+')' : (i===1 ? '昨天 ('+key+')' : key);
+      var opt = document.createElement('option'); opt.value = key; opt.textContent = label;
+      if (key === currentVal) opt.selected = true; sel.appendChild(opt);
+    }
+  }
+
+  function onFeedDateChange() { currentFeedDate = document.getElementById('feed-date-select').value; loadDraftForDate(currentFeedDate); }
+  function onMedDateChange() { currentMedDate = document.getElementById('med-date-select').value; loadMedDraftForDate(currentMedDate); }
+
+  function switchTab(tab) {
+    document.querySelectorAll('.tab-btn').forEach(function(btn) { btn.classList.toggle('active', btn.id === 'tab-'+tab); });
+    document.querySelectorAll('.section').forEach(function(s) { s.classList.remove('active'); });
+    document.getElementById('section-'+tab).classList.add('active');
+    if (tab === 'summary') renderSummary();
+    if (tab === 'history') { renderHistory(); renderWeightChart(); }
+  }
+
+  function addGramItem(type, value) {
+    var list = document.getElementById('list-'+type);
+    var item = document.createElement('div'); item.className = 'feed-item';
+    var inp = document.createElement('input'); inp.type='number'; inp.min='0'; inp.step='0.1'; inp.placeholder='克数';
+    if (value !== undefined) inp.value = value; inp.oninput = autoSave;
+    var unit = document.createElement('span'); unit.className='unit'; unit.textContent='克';
+    var del = document.createElement('button'); del.className='del-btn'; del.textContent='✕';
+    del.onclick = function() { list.removeChild(item); autoSave(); };
+    item.appendChild(inp); item.appendChild(unit); item.appendChild(del); list.appendChild(item); inp.focus();
+  }
+
+  var WET_BRANDS = [{label:'皇家-85g',grams:85},{label:'皇家-195g',grams:195},{label:'主食罐-85g',grams:85},{label:'主食罐-170g',grams:170},{label:'自定义',grams:null}];
+
+  function addWetItem(data) {
+    var list = document.getElementById('list-wet');
+    var item = document.createElement('div'); item.className = 'wet-item';
+    var sel = document.createElement('select');
+    WET_BRANDS.forEach(function(b) { var opt=document.createElement('option'); opt.value=b.grams!==null?b.grams:'custom'; opt.textContent=b.label; sel.appendChild(opt); });
+    var inp = document.createElement('input'); inp.type='number'; inp.min='0'; inp.step='0.1'; inp.placeholder='克'; inp.style.width='72px';
+    var unit = document.createElement('span'); unit.className='unit'; unit.textContent='克';
+    if (data) { inp.value=data.grams||''; var matched=false; WET_BRANDS.forEach(function(b,i){ if(b.grams!==null&&b.grams==data.grams){sel.selectedIndex=i;matched=true;} }); if(!matched) sel.value='custom'; }
+    else { inp.value=WET_BRANDS[0].grams; }
+    sel.onchange = function() { if(sel.value!=='custom'){inp.value=sel.value;}else{inp.value='';inp.focus();} autoSave(); };
+    inp.oninput = autoSave;
+    var del = document.createElement('button'); del.className='del-btn'; del.textContent='✕';
+    del.onclick = function() { list.removeChild(item); autoSave(); };
+    item.appendChild(sel); item.appendChild(inp); item.appendChild(unit); item.appendChild(del); list.appendChild(item);
+  }
+
+  var MED_UNITS = ['片','粒','mg','ml','次'];
+
+  function addMedItem(data) {
+    var list = document.getElementById('list-med');
+    var item = document.createElement('div'); item.className = 'med-item';
+    var nameInp = document.createElement('input'); nameInp.type='text'; nameInp.placeholder='药物名称'; nameInp.oninput=autoSave;
+    var doseInp = document.createElement('input'); doseInp.type='number'; doseInp.min='0'; doseInp.placeholder='剂量'; doseInp.style.width='54px'; doseInp.oninput=autoSave;
+    var unitSel = document.createElement('select'); MED_UNITS.forEach(function(u){var opt=document.createElement('option');opt.value=u;opt.textContent=u;unitSel.appendChild(opt);}); unitSel.onchange=autoSave;
+    var xSep = document.createElement('span'); xSep.className='x-sep'; xSep.textContent='×';
+    var timesInp = document.createElement('input'); timesInp.type='number'; timesInp.min='1'; timesInp.value='1'; timesInp.placeholder='次'; timesInp.style.width='48px'; timesInp.oninput=autoSave;
+    var timesUnit = document.createElement('span'); timesUnit.className='unit'; timesUnit.textContent='次/天';
+    var del = document.createElement('button'); del.className='del-btn'; del.textContent='✕';
+    del.onclick = function() { list.removeChild(item); autoSave(); };
+    if (data) { nameInp.value=data.name||''; doseInp.value=data.dose||''; unitSel.value=data.unit||'片'; timesInp.value=data.times||1; }
+    item.appendChild(nameInp); item.appendChild(doseInp); item.appendChild(unitSel); item.appendChild(xSep); item.appendChild(timesInp); item.appendChild(timesUnit); item.appendChild(del); list.appendChild(item); nameInp.focus();
+  }
+
+  function readDraft() {
+    var kibbleItems=[]; document.querySelectorAll('#list-kibble .feed-item input[type=number]').forEach(function(inp){kibbleItems.push(parseFloat(inp.value)||0);});
+    var wetItems=[]; document.querySelectorAll('#list-wet .wet-item').forEach(function(item){wetItems.push({grams:parseFloat(item.querySelector('input[type=number]').value)||0});});
+    var otherItems=[]; document.querySelectorAll('#list-other .feed-item input[type=number]').forEach(function(inp){otherItems.push(parseFloat(inp.value)||0);});
+    var medItems=[]; document.querySelectorAll('#list-med .med-item').forEach(function(item){var inputs=item.querySelectorAll('input');var sel=item.querySelector('select');medItems.push({name:inputs[0].value||'',dose:parseFloat(inputs[1].value)||0,unit:sel?sel.value:'片',times:parseFloat(inputs[2]?inputs[2].value:1)||1});});
+    var lk=document.getElementById('leftover-kibble').value, lw=document.getElementById('leftover-wet').value, lo=document.getElementById('leftover-other').value;
+    return {kibble:kibbleItems,wet:wetItems,other:otherItems,meds:medItems,medNote:document.getElementById('med-note').value||'',leftoverKibble:lk===''?-1:parseFloat(lk),leftoverWet:parseFloat(lw),leftoverOther:lo===''?-1:parseFloat(lo)};
+  }
+
+  function getDraftKey(dateStr) { return 'heihv_draft_'+dateStr; }
+
+  function saveDraft() {
+    var draft = readDraft(); draft.savedAt = Date.now();
+    localStorage.setItem(getDraftKey(currentFeedDate), JSON.stringify(draft));
+    saveToHistory(currentFeedDate, draft);
+    if (currentMedDate !== currentFeedDate) {
+      var md = localStorage.getItem(getDraftKey(currentMedDate)); var medDraft = md ? JSON.parse(md) : {};
+      medDraft.meds=draft.meds; medDraft.medNote=draft.medNote; medDraft.savedAt=Date.now();
+      localStorage.setItem(getDraftKey(currentMedDate), JSON.stringify(medDraft)); saveToHistory(currentMedDate, medDraft);
+    }
+  }
+
+  function autoSave() { clearTimeout(saveTimer); saveTimer=setTimeout(function(){ saveDraft(); showSaveTip('autosave-tip'); showSaveTip('autosave-tip-med'); },600); }
+
+  function showSaveTip(id) {
+    var el=document.getElementById(id); if(!el) return;
+    var paw=document.createElement('span'); paw.className='paw-float'; paw.textContent='🐾'; el.appendChild(paw);
+    setTimeout(function(){ if(el.contains(paw)) el.removeChild(paw); },1400);
+    el.textContent='✓ 已保存'; el.classList.add('saved');
+    setTimeout(function(){ el.textContent='填写后自动保存'; el.classList.remove('saved'); },2000);
+  }
+
+  function loadDraftForDate(dateStr) {
+    var raw=localStorage.getItem(getDraftKey(dateStr));
+    document.getElementById('list-kibble').innerHTML=''; document.getElementById('list-wet').innerHTML=''; document.getElementById('list-other').innerHTML='';
+    document.getElementById('leftover-kibble').value=''; document.getElementById('leftover-wet').value='-1'; document.getElementById('leftover-other').value='';
+    if(!raw) return;
+    try { var d=JSON.parse(raw); (d.kibble||[]).forEach(function(v){addGramItem('kibble',v);}); (d.wet||[]).forEach(function(item){addWetItem(item);}); (d.other||[]).forEach(function(v){addGramItem('other',v);}); if(d.leftoverKibble>=0) document.getElementById('leftover-kibble').value=d.leftoverKibble; if(d.leftoverWet!==undefined&&d.leftoverWet>=0) document.getElementById('leftover-wet').value=d.leftoverWet; if(d.leftoverOther>=0) document.getElementById('leftover-other').value=d.leftoverOther; } catch(e) {}
+  }
+
+  function loadMedDraftForDate(dateStr) {
+    var raw=localStorage.getItem(getDraftKey(dateStr));
+    document.getElementById('list-med').innerHTML=''; document.getElementById('med-note').value='';
+    if(!raw) return;
+    try { var d=JSON.parse(raw); (d.meds||[]).forEach(function(item){addMedItem(item);}); document.getElementById('med-note').value=d.medNote||''; } catch(e) {}
+  }
+
+  function saveYesterday() {
+    clearTimeout(yestTimer);
+    yestTimer=setTimeout(function(){
+      var kibble=parseFloat(document.getElementById('yest-kibble').value), wet=parseFloat(document.getElementById('yest-wet').value), other=parseFloat(document.getElementById('yest-other').value);
+      var raw=localStorage.getItem(getDraftKey(yesterdayKey)); var yestDraft=raw?JSON.parse(raw):{};
+      if(!isNaN(kibble)) yestDraft.leftoverKibble=kibble; if(wet>=0) yestDraft.leftoverWet=wet; if(!isNaN(other)) yestDraft.leftoverOther=other;
+      localStorage.setItem(getDraftKey(yesterdayKey), JSON.stringify(yestDraft)); saveToHistory(yesterdayKey, yestDraft);
+      var tip=document.getElementById('yest-save-tip'); tip.textContent='✓ 昨日数据已更新'; tip.classList.add('saved');
+      setTimeout(function(){ tip.textContent=''; tip.classList.remove('saved'); },2500);
+    },600);
+  }
+
+  var HISTORY_KEY='heihv_history';
+  function saveToHistory(dateStr,draft) { var h=getHistory(); h[dateStr]=computeDayTotal(draft); if(draft.meds&&draft.meds.length>0){h[dateStr].meds=draft.meds;h[dateStr].medNote=draft.medNote||'';} localStorage.setItem(HISTORY_KEY,JSON.stringify(h)); }
+  function getHistory() { try{return JSON.parse(localStorage.getItem(HISTORY_KEY))||{};}catch(e){return {};} }
+  function r1(x) { return Math.round(x*10)/10; }
+
+  function computeDayTotal(d) {
+    if(!d) return {total:null,pending:true,kibble:0,wet:0,other:0};
+    var kibbleFed=r1((d.kibble||[]).reduce(function(s,v){return s+v;},0)), wetFed=r1((d.wet||[]).reduce(function(s,item){return s+(item.grams||0);},0)), otherFed=r1((d.other||[]).reduce(function(s,v){return s+v;},0));
+    var kibbleNet,wetNet,otherNet,pending=false;
+    if(d.leftoverKibble>=0){kibbleNet=r1(Math.max(0,kibbleFed-d.leftoverKibble));}else{kibbleNet=kibbleFed;pending=true;}
+    if(d.leftoverWet>=0){wetNet=r1(wetFed*(1-d.leftoverWet));}else{wetNet=wetFed;pending=true;}
+    if(d.leftoverOther>=0){otherNet=r1(Math.max(0,otherFed-d.leftoverOther));}else{otherNet=otherFed;pending=true;}
+    return {total:r1(kibbleNet+wetNet+otherNet),pending:pending,kibble:kibbleNet,wet:wetNet,other:otherNet};
+  }
+
+  function renderSummary() {
+    var d=readDraft(), result=computeDayTotal(d), container=document.getElementById('summary-content');
+    var kibbleFed=r1((d.kibble||[]).reduce(function(s,v){return s+v;},0)), wetFed=r1((d.wet||[]).reduce(function(s,item){return s+(item.grams||0);},0)), otherFed=r1((d.other||[]).reduce(function(s,v){return s+v;},0));
+    if(kibbleFed===0&&wetFed===0&&otherFed===0&&d.meds.length===0){container.innerHTML='<div class="empty-tip">🐾 今天还没有记录哦</div>';return;}
+    var html='<h2>📊 '+currentFeedDate+' 摄入汇总</h2>';
+    if(kibbleFed>0||result.kibble>0){var t=d.leftoverKibble>=0?result.kibble.toFixed(1)+' 克':'待定';html+='<div class="summary-row"><span class="label">🥣 猫粮</span><span class="value">'+t+'</span></div>';}
+    if(wetFed>0||result.wet>0){var t=d.leftoverWet>=0?result.wet.toFixed(1)+' 克':'待定';html+='<div class="summary-row"><span class="label">🥫 罐头</span><span class="value">'+t+'</span></div>';}
+    if(otherFed>0||result.other>0){var t=d.leftoverOther>=0?result.other.toFixed(1)+' 克':'待定';html+='<div class="summary-row"><span class="label">🍗 其它</span><span class="value">'+t+'</span></div>';}
+    html+='<div class="total-row"><span>🐱 总摄入</span><span>'+result.total.toFixed(1)+' 克'+(result.pending?' *':'')+'</span></div>';
+    if(result.pending) html+='<div class="pending-note">* 部分剩余未填，数值仅供参考</div>';
+    if(d.meds.length>0){html+='<div class="med-summary-block"><h3>💊 今日用药</h3>';d.meds.forEach(function(m){if(m.name)html+='<div class="med-summary-item"><span>'+m.name+'</span><span>'+m.dose+' '+m.unit+' × '+m.times+'次/天</span></div>';});if(d.medNote)html+='<div class="med-summary-note">'+d.medNote+'</div>';html+='</div>';}
+    container.innerHTML=html;
+  }
+
+  function setRange(n,btn) { currentRange=n; document.querySelectorAll('.range-btn').forEach(function(b){b.classList.remove('active');}); btn.classList.add('active'); renderHistory(); }
+
+  function renderHistory() {
+    var history=getHistory(), labels=[], kibbleData=[], wetData=[], otherData=[];
+    for(var i=currentRange-1;i>=0;i--){
+      var d=new Date(now); d.setDate(now.getDate()-i); var key=dateKey(d); var entry=history[key];
+      var label=(d.getMonth()+1)+'/'+d.getDate(); labels.push(label);
+      if(entry){kibbleData.push(entry.kibble||0);wetData.push(entry.wet||0);otherData.push(entry.other||0);}
+      else{kibbleData.push(null);wetData.push(null);otherData.push(null);}
+    }
+    var ctx=document.getElementById('history-chart').getContext('2d');
+    if(chartInstance) chartInstance.destroy();
+    chartInstance=new Chart(ctx,{type:'bar',data:{labels:labels,datasets:[{label:'猫粮',data:kibbleData,backgroundColor:'rgba(139,94,60,0.7)',borderRadius:4},{label:'罐头',data:wetData,backgroundColor:'rgba(196,154,108,0.7)',borderRadius:4},{label:'其它',data:otherData,backgroundColor:'rgba(240,176,96,0.7)',borderRadius:4}]},options:{responsive:true,plugins:{legend:{position:'bottom',labels:{font:{size:11},color:'#3d2b1f'}},tooltip:{callbacks:{label:function(ctx){return ctx.dataset.label+': '+(ctx.raw||0)+'g';}}}},scales:{x:{stacked:true,ticks:{font:{size:10},color:'#a08878'},grid:{display:false}},y:{stacked:true,ticks:{font:{size:10},color:'#a08878'},grid:{color:'#f0e8e0'}}}}});
+    renderWeightChart();
+  }
+
+  var WEIGHT_KEY='heihv_weight';
+  function getWeights(){try{return JSON.parse(localStorage.getItem(WEIGHT_KEY))||{};}catch(e){return {};}}
+  function saveWeights(w){localStorage.setItem(WEIGHT_KEY,JSON.stringify(w));}
+
+  function addWeightRecord() {
+    var date=document.getElementById('weight-date').value, val=parseFloat(document.getElementById('weight-value').value);
+    if(!date||isNaN(val)||val<=0){alert('请填写日期和体重');return;}
+    var weights=getWeights(); weights[date]=Math.round(val*100)/100;
+    saveWeights(weights); document.getElementById('weight-value').value='';
+    renderWeightChart();
+  }
+
+  function renderWeightChart() {
+    var weights=getWeights(), keys=Object.keys(weights).sort();
+    var ctx=document.getElementById('weight-chart'); if(!ctx) return;
+    var context=ctx.getContext('2d');
+    if(weightChartInstance) weightChartInstance.destroy();
+    if(keys.length===0) return;
+    weightChartInstance=new Chart(context,{
+      type:'scatter',
+      data:{datasets:[{label:'体重(kg)',data:keys.map(function(k,i){return{x:i,y:weights[k]};}),backgroundColor:'rgba(139,94,60,0.85)',pointRadius:7,pointHoverRadius:9,showLine:false}]},
+      options:{responsive:true,
+        plugins:{legend:{display:false},tooltip:{callbacks:{label:function(c){return keys[c.parsed.x]+': '+c.parsed.y.toFixed(2)+' kg';}}}},
+        scales:{x:{ticks:{font:{size:10},color:'#a08878',callback:function(v){return keys[v]?keys[v].slice(5):''}},grid:{display:false}},y:{ticks:{font:{size:10},color:'#a08878',callback:function(v){return v.toFixed(2);}},grid:{color:'#f0e8e0'}}},
+        animation:{onComplete:function(){
+          var chart=this,ctx2=chart.ctx;
+          ctx2.font='11px sans-serif'; ctx2.fillStyle='#8b5e3c'; ctx2.textAlign='center'; ctx2.textBaseline='bottom';
+          chart.data.datasets[0].data.forEach(function(pt,i){var meta=chart.getDatasetMeta(0);if(meta.data[i]){ctx2.fillText(pt.y.toFixed(2),meta.data[i].x,meta.data[i].y-10);}});
+        }}
+      }
+    });
+  }
+
+  buildDateOptions('feed-date-select', todayKey);
+  buildDateOptions('med-date-select', todayKey);
+  loadDraftForDate(todayKey);
+  loadMedDraftForDate(todayKey);
+  renderWeightChart();
+  document.getElementById('weight-date').value = todayKey;
+</script>
+</body>
+</html>
